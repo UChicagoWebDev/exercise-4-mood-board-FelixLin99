@@ -2,54 +2,112 @@ const bing_api_endpoint = "https://api.bing.microsoft.com/v7.0/images/search";
 const bing_api_key = BING_API_KEY
 
 function runSearch() {
-
-  // TODO: Clear the results pane before you run a new search
+  // Clear previous search results
+  document.querySelector("#resultsImageContainer").innerHTML = "";
 
   openResultsPane();
 
-  // TODO: Build your query by combining the bing_api_endpoint and a query attribute
-  //  named 'q' that takes the value from the search bar input field.
+  // Build the query
+  let query = document.querySelector(".search input").value.trim();
+
+  if (query === "") {
+    alert("Please enter a search term");
+    return false;
+  }
 
   let request = new XMLHttpRequest();
 
-  // TODO: Construct the request object and add appropriate event listeners to
-  // handle responses. See:
-  // https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest_API/Using_XMLHttpRequest
-  //
-  //   - You'll want to specify that you want json as your response type
-  //   - Look for your data in event.target.response
-  //   - When adding headers, also include the commented out line below. See the API docs at:
-  // https://docs.microsoft.com/en-us/bing/search-apis/bing-image-search/reference/headers
-  //   - When you get your responses, add elements to the DOM in #resultsImageContainer to
-  //     display them to the user
-  //   - HINT: You'll need to ad even listeners to them after you add them to the DOM
-  //
-  // request.setRequestHeader("Ocp-Apim-Subscription-Key", bing_api_key);
+  request.open("GET", `${bing_api_endpoint}?q=${encodeURIComponent(query)}`, true);
+  request.setRequestHeader("Ocp-Apim-Subscription-Key", bing_api_key);
+  request.responseType = "json";
 
-  // TODO: Send the request
+  request.onload = function () {
+    if (request.status === 200) {
+      // Display image results
+      displayImageResults(request.response.value);
 
-  return false;  // Keep this; it keeps the browser from sending the event
-                  // further up the DOM chain. Here, we don't want to trigger
-                  // the default form submission behavior.
+      // Display related concepts
+      displayRelatedConcepts(request.response.relatedSearches);
+    } else {
+      alert("Error fetching search results. Please try again.");
+    }
+  };
+
+  request.send();
+
+  return false;
+}
+
+function displayImageResults(images) {
+  const resultsContainer = document.querySelector("#resultsImageContainer");
+
+  images.forEach((image) => {
+    const resultImage = document.createElement("div");
+    resultImage.classList.add("resultImage");
+
+    const imgElement = document.createElement("img");
+    imgElement.src = image.thumbnailUrl;
+
+    resultImage.appendChild(imgElement);
+
+    // Clicking on a result image adds it to the user's mood board
+    resultImage.addEventListener("click", function () {
+      addToMoodBoard(image.contentUrl);
+    });
+
+    resultsContainer.appendChild(resultImage);
+  });
+}
+
+function displayRelatedConcepts(relatedConcepts) {
+  const suggestionsContainer = document.querySelector(".suggestions ul");
+  suggestionsContainer.innerHTML = "";
+
+  relatedConcepts.forEach((concept) => {
+    const suggestion = document.createElement("li");
+    suggestion.textContent = concept.displayText;
+
+    // Clicking on a related concept runs a new search for that concept
+    suggestion.addEventListener("click", function () {
+      document.querySelector(".search input").value = concept.displayText;
+      runSearch();
+    });
+
+    suggestionsContainer.appendChild(suggestion);
+  });
+}
+
+function addToMoodBoard(imageUrl) {
+  const moodBoardContainer = document.querySelector("#board");
+
+  const savedImage = document.createElement("div");
+  savedImage.classList.add("savedImage");
+
+  const imgElement = document.createElement("img");
+  imgElement.src = imageUrl;
+
+  savedImage.appendChild(imgElement);
+  moodBoardContainer.appendChild(savedImage);
 }
 
 function openResultsPane() {
-  // This will make the results pane visible.
   document.querySelector("#resultsExpander").classList.add("open");
 }
 
 function closeResultsPane() {
-  // This will make the results pane hidden again.
   document.querySelector("#resultsExpander").classList.remove("open");
 }
 
-// This will 
 document.querySelector("#runSearchButton").addEventListener("click", runSearch);
 document.querySelector(".search input").addEventListener("keypress", (e) => {
-  if (e.key == "Enter") {runSearch()}
+  if (e.key == "Enter") {
+    runSearch();
+  }
 });
 
 document.querySelector("#closeResultsButton").addEventListener("click", closeResultsPane);
 document.querySelector("body").addEventListener("keydown", (e) => {
-  if(e.key == "Escape") {closeResultsPane()}
+  if (e.key == "Escape") {
+    closeResultsPane();
+  }
 });
